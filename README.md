@@ -63,20 +63,19 @@
    ```bash
    cp .env.example .env
    ```
-   Edit `.env` with your details:
-   ```env
-   # Creator Information
-   CREATOR_NAME=Your Name
-   CREATOR_PHONE=+1234567890
-   CREATOR_JID=1234567890@s.whatsapp.net
-   CREATOR_EMAIL=your.email@example.com
-   CREATOR_WEBSITE=https://yourwebsite.com
-   CREATOR_SOCIAL=@yourusername
+   Copy the `.env.example` file to `.env` in the root directory and edit it with your details:
 
-   # Bot Configuration
-   BOT_NAME=YourBotName
-   BOT_VERSION=1.0.0
-   BOT_DESCRIPTION=Your bot description
+
+   ```
+   #.env
+   # Creator Details
+   CREATOR_NAME=Your Name 
+
+   # The phone number format is: +<countrycode><phone_number>
+   CREATOR_PHONE=+1234567890
+
+   # Debug (optional)
+   DEBUG=true
    ```
 
 4. **Start the bot**
@@ -133,25 +132,7 @@
 - **[group]** - Group-only commands
 - **Public** - Everyone can use
 
-## ⚙️ Configuration
-
-### Environment Variables
-
-Copy the `.env.example` file to `.env` in the root directory and edit it with your details:
-
-```env
-# Creator Details
-CREATOR_NAME=Your Name 
-
-# The phone number format is: +<countrycode><phone_number>
-CREATOR_PHONE=+1234567890
-
-# Debug (optional)
-DEBUG=true
-```
-
 > **Note:** Always update the values in your new `.env` file to match your setup.
-```
 
 ### Directory Structure
 ```
