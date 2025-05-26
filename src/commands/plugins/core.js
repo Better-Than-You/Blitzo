@@ -120,15 +120,24 @@ export const coreCommands = {
     aliases: ['contact', 'dev', 'owner'],
     category: 'Core',
     handler: async (sock, messageInfo) => {
-      const creatorText =
-        `👨‍💻 Bot Creator Information\n\n` +
-        `📛 Name: ${botConfig.creator.name}\n` +
-        `📱 Phone: ${botConfig.creator.phone}\n` +
-        `🌐 Github: ${botConfig.creator.github}\n` +
-        `📷 Social: ${botConfig.creator.social}` +
-        `⚡ Thank you for using ${botConfig.name}!`
-
-      return await sock.sendReply(messageInfo, creatorText)
+      const vcard = [
+        'BEGIN:VCARD',
+        'VERSION:3.0',
+        `FN:${botConfig.creator.name}`,
+        `TEL;type=CELL;waid=${botConfig.creator.phone.slice(1)}:${botConfig.creator.phone}`,
+        `EMAIL:${botConfig.creator.email}`,
+        'END:VCARD'
+      ].join('\n')
+      console.log(vcard);
+      await sock.sendMessage(messageInfo.jid, {
+        contacts: {
+            displayName: botConfig.creator.name,
+            contacts: [
+                { vcard }
+        ]
+    }, 
+      }, {quoted: messageInfo.originalMessage})
+      return await sock.sendMessage(messageInfo.jid, {text: `Contact info has been sent!`})
     },
   },
   hi: {

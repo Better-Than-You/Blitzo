@@ -3,6 +3,7 @@ import chalk from 'chalk'
 import { commandManager } from '../commands/commandManager.js'
 import { botConfig } from '../config/botConfig.js'
 import { extractPhoneFromJid } from '../utils/helpers.js'
+import { nameCache } from '../cache/nameCache.js'
 export async function messageHandler (sock, messageUpdate) {
   try {
     logger.debug(`📨 Processing messageUpdate: ${JSON.stringify(messageUpdate, null, 2)}`)
@@ -37,13 +38,17 @@ export async function messageHandler (sock, messageUpdate) {
         continue
       }
 
-      logger.debug(`✅ Extracted message info: ${JSON.stringify(messageInfo, null, 2)}`)
+      logger.debug(`✅ Extracted message info: ${JSON.stringify(messageInfo, null, 2)}`)      // Log the received message
+      logMessage(messageInfo, sock)
 
-      // Log the received message
-      logMessage(messageInfo)
+      // Optimize cache for active groups
+      await optimizeGroupCache(sock, messageInfo)
 
       // Process commands or auto-replies
       await processMessage(sock, messageInfo)
+
+      // Auto-preload cache for active groups
+      await optimizeGroupCache(sock, messageInfo)
     }
   } catch (error) {
     logger.error('💥 Error in message handler:', error)
@@ -91,39 +96,21 @@ async function extractMessageInfo (sock, message) {
       // Log unknown message types for debugging
       logger.debug(`Unknown message type: ${JSON.stringify(Object.keys(messageTypes), null, 2)}`)
       return null
-    } // Get username/display name
+    } // Get username/display name using cache
     const senderJid = message.key.participant || message.key.remoteJid
     let username = senderJid.split('@')[0] // Default to phone number
 
     try {
-      // For group messages, try to get the push name from the message
-      if (message.pushName && message.pushName.trim()) {
-        username = message.pushName.trim()
-      }
-
-      // If still no proper name and it's a group, try group metadata
-      if (username === senderJid.split('@')[0] && message.key.remoteJid.includes('@g.us')) {
-        try {
-          const groupMetadata = await sock.groupMetadata(message.key.remoteJid)
-          const participant = groupMetadata.participants.find(p => p.id === senderJid)
-          if (participant) {
-            // Try different name sources
-            if (participant.notify && participant.notify.trim()) {
-              username = participant.notify.trim()
-            } else if (participant.name && participant.name.trim()) {
-              username = participant.name.trim()
-            }
-          }
-        } catch (groupError) {
-          logger.debug('Could not get group metadata:', groupError.message)
-        }
-      }
-
-      if (username === senderJid.split('@')[0] && message.verifiedBizName) {
-        username = message.verifiedBizName
+      // Use cache to get username
+      if (message.key.remoteJid.includes('@g.us')) {
+        // For group messages, get participant username
+        username = await nameCache.getParticipantUsername(senderJid, message.key.remoteJid, message)
+      } else {
+        // For private messages, get username
+        username = await nameCache.getUsername(senderJid, message)
       }
     } catch (error) {
-      logger.debug('Error getting username:', error.message)
+      logger.debug('Error getting username from cache:', error.message)
     }
     return {
       jid: message.key.remoteJid,
@@ -145,11 +132,16 @@ async function extractMessageInfo (sock, message) {
   }
 }
 
-function logMessage (messageInfo) {
+async function logMessage (messageInfo, socket) {
   if (messageInfo.fromMe) return //not logging own messages
 
-  const number = chalk.blue(extractPhoneFromJid(messageInfo.jid))
   const isGroup = messageInfo.jid.includes('@g.us')
+
+  // Use cache for group names instead of direct API calls
+  const number = isGroup 
+    ? chalk.blue(await nameCache.getGroupName(messageInfo.jid))
+    : chalk.blue(extractPhoneFromJid(messageInfo.jid))
+
   const chatType = isGroup ? '👥 Group' : '👤 Private'
   const timestamp = new Date(messageInfo.timestamp * 1000).toLocaleTimeString()
 
@@ -174,4 +166,25 @@ async function processMessage (sock, messageInfo) {
   if (text.startsWith(botConfig.prefix)) {
     await commandManager.handleCommand(sock, messageInfo, text)
   } // can add more auto-reply logic here if needed
+}
+
+// Auto-preload cache for active groups
+async function optimizeGroupCache(sock, messageInfo) {
+  if (!messageInfo.fromGroup) return
+  
+  try {
+    // Check if this group needs cache preloading
+    const groupInfo = await nameCache.getGroupInfo(messageInfo.jid)
+    
+    // If group info is not cached or participants are low in cache, preload
+    if (!groupInfo) {
+      // Run preload in background to not block message processing
+      setImmediate(async () => {
+        await nameCache.preloadGroupCache(messageInfo.jid)
+        logger.debug(`🚀 Auto-preloaded cache for active group ${messageInfo.jid}`)
+      })
+    }
+  } catch (error) {
+    logger.debug('Error in auto cache optimization:', error.message)
+  }
 }

@@ -4,6 +4,7 @@ import QRCode from 'qrcode'
 import { messageHandler } from './handlers/messageHandler.js'
 import { logger } from './utils/logger.js'
 import { botConfig } from './config/botConfig.js'
+import { nameCache } from './cache/nameCache.js'
 
 class WhatsAppBot {
   constructor () {
@@ -41,17 +42,33 @@ class WhatsAppBot {
           maxCommitRetries: 1,
           delayBetweenTriesMs: 3000,
         },
-      })
-
+      })      
+      
       // adding additoinal methods to the socket
+      
       this.sock.sendReply = async (message, text) => {
         await this.sock.sendMessage(message.jid, { text }, { quoted: message.originalMessage })
       }
+      
       this.sock.sendReaction = async (message, reaction) => {
-        await this.sock.sendMessage(message.jid, { react: { text: reaction, key: message.originalMessage.key, },         })
+        await this.sock.sendMessage(message.jid, { 
+          react: { 
+            text: reaction, 
+            key: message.originalMessage.key 
+          } 
+        })
+      }
+
+      this.sock.loadPlugins = async () => {
+        const { commandManager } = await import('./commands/commandManager.js')
+        return await commandManager.reloadPlugins()
       }
 
       this.setupEventHandlers(saveCreds)
+      
+      // Setting socket instance in caches (am fast as f boi)
+      nameCache.setSocket(this.sock)
+      
       logger.info(`⚡ ${botConfig.name} initialized`)
 
       return this.sock
@@ -62,10 +79,7 @@ class WhatsAppBot {
   }
 
   setupEventHandlers (saveCreds) {
-    // Handle credential updates
     this.sock.ev.on('creds.update', saveCreds)
-
-    // Handle connection updates
     this.sock.ev.on('connection.update', async update => {
       const { connection, lastDisconnect, qr } = update
 
@@ -84,7 +98,9 @@ class WhatsAppBot {
         if (shouldReconnect) {
           if (this.reconnectAttempts < this.maxReconnectAttempts) {
             this.reconnectAttempts++
-            const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000) // Exponential backoff
+
+            // Inceasing delay capped to 30s, for rate limiting reasons :/
+            const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000) 
             logger.warn(
               `🔄 Reconnecting in ${delay / 1000}s... (Attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`
             )
@@ -99,29 +115,31 @@ class WhatsAppBot {
         } else {
           logger.error('❌ Bot logged out')
           process.exit(1)
-        }
-      } else if (connection === 'open') {
+        }      } else if (connection === 'open') {
         logger.success(botConfig.name + ' connected successfully!')
         this.isConnected = true
-        this.reconnectAttempts = 0 // Reset reconnect attempts on successful connection
+        this.reconnectAttempts = 0 // if successfully connect, reset attempts
 
-        // Wait a bit after connection to avoid immediate disconnection
+        // Cache cleaning interval
+        nameCache.startCleanupInterval()
+
+        // 2 seconds delay to ensure everything is ready coz why not :)
         setTimeout(() => {
           logger.info(`⚡ ${botConfig.name} is ready to receive messages!`)
-        }, 5000)
+        }, 2000)
       } else if (connection === 'connecting') {
         logger.info('🔗 Connecting to WhatsApp...')
       }
-    }) // Handle incoming messages
+    })
     this.sock.ev.on('messages.upsert', async m => {
       logger.debug(`Received messages.upsert event: ${JSON.stringify(m, null, 2)}`)
       await messageHandler(this.sock, m)
     })
 
-    // Also handle message updates which might contain new messages
+    // Handle message updates which can indicate new messages
+    // Useful for when messages are edited or deleted (future plan: restore deleted messages)
     this.sock.ev.on('messages.update', async m => {
       logger.debug(`Received messages.update event: ${JSON.stringify(m, null, 2)}`)
-      // Some messages might come through updates
       if (m && m.length > 0) {
         for (const msg of m) {
           if (msg.update && msg.update.message) {
@@ -139,18 +157,19 @@ class WhatsAppBot {
     // Handle presence updates
     this.sock.ev.on('presence.update', presence => {
       logger.debug(`Presence update: ${JSON.stringify(presence, null, 2)}`)
-    }) // Debug: Log all events to see what we're receiving
+    }) 
+    // Debug: Log all events to see what we're receiving
     if (process.env.DEBUG) {
       const originalEmit = this.sock.ev.emit
       this.sock.ev.emit = function (event, ...args) {
-        // Log all events except noisy ones
+        // Log all events except useless ones
         if (!['creds.update', 'connection.update'].includes(event)) {
           logger.debug(`📡 Event: ${event}`, args.length > 0 ? JSON.stringify(args[0], null, 2) : '')
         }
         return originalEmit.apply(this, [event, ...args])
       }
 
-      // Also listen to specific events that might contain messages
+      // More listeners for debug purposes >:)
       this.sock.ev.on('messaging-history.set', history => {
         logger.debug(`🗂️  Messaging history set: ${JSON.stringify(history, null, 2)}`)
       })
@@ -164,7 +183,6 @@ class WhatsAppBot {
       })
     }
 
-    // Handle connection errors
     this.sock.ev.on('connection.error', error => {
       logger.error('Connection error:', error)
     })

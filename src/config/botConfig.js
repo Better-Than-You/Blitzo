@@ -1,31 +1,46 @@
 import dotenv from 'dotenv';
 
 
-// Load environment variables
 dotenv.config();
 
 export const botConfig = {
-    // Bot prefix settings
-    prefix: '/',
-    
-    // Bot information
+    prefix: process.env.BOT_PREFIX || '/',
+
     name: process.env.BOT_NAME || 'Blitzo',
     version: process.env.BOT_VERSION || '1.0.0',
     description: process.env.BOT_DESCRIPTION || 'A simple WhatsApp bot prototype',
-    
-    // Creator information from environment
+
     creator: {
         name: process.env.CREATOR_NAME || 'Sujatro',
         phone: process.env.CREATOR_PHONE,
-        jid: process.env.CREATOR_PHONE.slice(1) + '@s.whatsapp.net', // Creator's WhatsApp JID
+        email: process.env.CREATOR_EMAIL || 'john@doe',
+        jid: process.env.CREATOR_PHONE.slice(1) + '@s.whatsapp.net', // Creator's jid
         github: process.env.CREATOR_GITHUB || 'https://github.com/Better-Than-You',
         social: process.env.CREATOR_SOCIAL || '@better_th4n_y0u',
     },
     
-    // Moderators list (can be modified at runtime)
+    // .env hot reload
+    reload() {
+        dotenv.config();
+        this.name = process.env.BOT_NAME || 'Blitzo';
+        this.version = process.env.BOT_VERSION || '1.0.0';
+        this.description = process.env.BOT_DESCRIPTION || 'A simple WhatsApp bot prototype';
+        this.creator.name = process.env.CREATOR_NAME || 'Sujatro';
+        this.creator.phone = process.env.CREATOR_PHONE;
+        this.creator.email = process.env.CREATOR_EMAIL || 'john@doe';
+        this.creator.jid = process.env.CREATOR_PHONE ? process.env.CREATOR_PHONE.slice(1) + '@s.whatsapp.net' : null;
+        this.creator.github = process.env.CREATOR_GITHUB || 'https://github.com/Better-Than-You';
+        this.creator.social = process.env.CREATOR_SOCIAL || '@better_th4n_y0u';
+    },
+    
+    // Social links
+    social: {
+        github: process.env.CREATOR_GITHUB || 'https://github.com/Better-Than-You',
+        social: process.env.CREATOR_SOCIAL || '@better_th4n_y0u',
+    },
+    
     mods: [],
     
-    // Features
     features: [
         'Colorized message logging',
         'Command handling',
@@ -35,13 +50,11 @@ export const botConfig = {
         'Configurable prefix',
         'Creator and mod management'
     ],
-    
-    // Admin settings
+
     adminOnly: {
         mention: true
     },
-    
-    // Method to change prefix
+
     setPrefix(newPrefix) {
         if (newPrefix && newPrefix.length === 1 && newPrefix !== ' ') {
             this.prefix = newPrefix;
@@ -50,9 +63,8 @@ export const botConfig = {
         return false;
     },
 
-    // Method to reset prefix to default
     resetPrefix() {
-        this.prefix = '/';
+        this.prefix = process.env.BOT_PREFIX || '/';
     },
 
     // Method to check if user is creator

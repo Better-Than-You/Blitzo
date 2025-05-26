@@ -126,23 +126,26 @@ export const moderationCommands = {
     handler: async (sock, messageInfo) => {
       const mods = botConfig.getMods()
       const creator = botConfig.creator
-
-      let modText = `🛡️ **Bot Administration**\n\n`
-      modText += `👑 **Creator:**\n`
-      modText += `• ${creator.name} (${extractPhoneFromJid(creator.jid)})\n\n`
+      let mentions = []
+      let modText = `🛡️ *Bot Administration*\n\n`
+      modText += `👑 *Creator:*\n`
+      modText += `• ${creator.name} (@${creator.jid.split('@')[0]})\n\n`
+      mentions.push(creator.jid)
 
       if (mods.length > 0) {
-        modText += `🛡️ **Moderators (${mods.length}):**\n`
+        modText += `🛡️ *Moderators (${mods.length}):*\n`
+        mods
         mods.forEach((modJid, index) => {
-          modText += `${index + 1}. ${extractPhoneFromJid(modJid)}\n`
+          modText += `${index + 1}. @${(modJid.split('@')[0n])}\n`
+          mentions.push(modJid)
         })
       } else {
-        modText += `🛡️ **Moderators:** None\n`
+        modText += `🛡️ *Moderators:* None\n`
       }
 
       modText += `\n⚡ Total Staff: ${1 + mods.length}`
 
-      return await sock.sendReply(messageInfo, modText)
+      return await sock.sendMessage(messageInfo.jid, {text: modText, mentions: mentions})
     }
   },
 
