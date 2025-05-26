@@ -1,0 +1,21 @@
+{
+  "name": "blitzo",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "A quick whatsapp bot with readable terminal output",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "baileys": "^6.7.17",
+    "chalk": "^5.4.1",
+    "dotenv": "^16.5.0",
+    "pino": "^9.7.0",
+    "qrcode": "^1.5.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
