@@ -106,7 +106,8 @@ export const groupCommands = {
         }
 
         const participantIds = participants.map(p => p.id)
-        const mentionText = `⚡ ${botConfig.name} Announcement\n\nAttention everyone! 📢`
+        const announcement = '\n' + messageInfo.arguments.join(' ').trim() || ''
+        const mentionText = `⚡ ${botConfig.name} Announcement\n\nAttention everyone!📢 ${announcement}`
 
         await sock.sendMessage(messageInfo.jid, {
           text: mentionText,
