@@ -6,29 +6,20 @@ import { extractPhoneFromJid } from '../utils/helpers.js'
 import { nameCache } from '../cache/nameCache.js'
 export async function messageHandler (sock, messageUpdate) {
   try {
-    logger.debug(`📨 Processing messageUpdate: ${JSON.stringify(messageUpdate, null, 2)}`)
     const { messages, type } = messageUpdate
 
-    // Log the type to see what we're getting
-    logger.debug(`📋 Message update type: ${type}`)
-
     if (!messages || messages.length === 0) {
-      logger.debug('❌ No messages in update')
       return
     }
 
     for (const message of messages) {
-      logger.debug(`🔍 Processing message: ${JSON.stringify(message, null, 2)}`)
-
-      // Skip if it's our own message
+      // Skip our own messages
       if (message.key.fromMe) {
-        logger.debug('⏭️  Skipping own message')
         continue
       }
 
-      // Skip if no message content
+      // Skip empty messages
       if (!message.message) {
-        logger.debug('❌ Message has no content, skipping')
         continue
       }
 

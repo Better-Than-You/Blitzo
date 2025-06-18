@@ -2,57 +2,42 @@ import { logger } from '../utils/logger.js'
 
 class NameCache {
   constructor() {
-    this.usernames = new Map() // jid -> username
-    this.groupNames = new Map() // groupJid -> groupName
-    this.lastUpdate = new Map() // jid -> timestamp
-    this.updateInterval = 10 * 60 * 1000 // 10 minutes in milliseconds
+    this.usernames = new Map()
+    this.groupNames = new Map()
+    this.lastUpdate = new Map()
+    this.updateInterval = 10 * 60 * 1000
     this.socket = null
     
-    logger.info('📝 Name cache initialized')
+    logger.info('Name cache initialized')
   }
 
-  /**
-   * Set the socket instance for API calls
-   */
   setSocket(socket) {
     this.socket = socket
   }
 
-  /**
-   * Check if cache entry is valid (less than 10 minutes old)
-   */
   isCacheValid(jid) {
     const lastUpdate = this.lastUpdate.get(jid)
     if (!lastUpdate) return false
     return (Date.now() - lastUpdate) < this.updateInterval
   }
-
-  /**
-   * Get username from cache or fetch from API
-   */
   async getUsername(jid, message = null) {
-    // Check cache first
     if (this.isCacheValid(jid) && this.usernames.has(jid)) {
       return this.usernames.get(jid)
     }
 
-    let username = jid.split('@')[0] // Default to phone number
+    let username = jid.split('@')[0]
 
     try {
-      // Try to get from message pushName first
       if (message?.pushName && message.pushName.trim()) {
         username = message.pushName.trim()
       }
-      // Try to get from verifiedBizName
       else if (message?.verifiedBizName && message.verifiedBizName.trim()) {
         username = message.verifiedBizName.trim()
       }
 
-      // Update cache
       this.usernames.set(jid, username)
       this.lastUpdate.set(jid, Date.now())
       
-      logger.debug(`📝 Cached username for ${jid}: ${username}`)
       return username
     } catch (error) {
       logger.debug(`Error getting username for ${jid}:`, error.message)
@@ -60,11 +45,7 @@ class NameCache {
     }
   }
 
-  /**
-   * Get group name from cache or fetch from API
-   */
   async getGroupName(groupJid) {
-    // Check cache first
     if (this.isCacheValid(groupJid) && this.groupNames.has(groupJid)) {
       return this.groupNames.get(groupJid)
     }
@@ -76,11 +57,8 @@ class NameCache {
         const groupMetadata = await this.socket.groupMetadata(groupJid)
         groupName = groupMetadata.subject || 'Unknown Group'
         
-        // Update cache
-        this.groupNames.set(groupJid, groupName)
+        // Update cache        this.groupNames.set(groupJid, groupName)
         this.lastUpdate.set(groupJid, Date.now())
-        
-        logger.debug(`📝 Cached group name for ${groupJid}: ${groupName}`)
       }
     } catch (error) {
       logger.debug(`Error getting group name for ${groupJid}:`, error.message)
@@ -89,23 +67,17 @@ class NameCache {
     return groupName
   }
 
-  /**
-   * Get participant username from group metadata
-   */
   async getParticipantUsername(senderJid, groupJid, message = null) {
     try {
-      // Check cache first
       if (this.isCacheValid(senderJid) && this.usernames.has(senderJid)) {
         return this.usernames.get(senderJid)
       }
 
-      let username = senderJid.split('@')[0] // Default
+      let username = senderJid.split('@')[0]
 
-      // Try message pushName first
       if (message?.pushName && message.pushName.trim()) {
         username = message.pushName.trim()
       } else if (this.socket && groupJid.includes('@g.us')) {
-        // Get from group metadata
         try {
           const groupMetadata = await this.socket.groupMetadata(groupJid)
           const participant = groupMetadata.participants.find(p => p.id === senderJid)

@@ -12,21 +12,20 @@ export const developmentCommands = {
     handler: async (sock, messageInfo) => {
       try {
         const code = messageInfo.arguments.join(' ')
-        logger.debug('Eval command received:', code)
         if (!code) {
-          await sock.sendReply(messageInfo, '❌ Please provide code to evaluate. Usage: `!eval <code>`')
+          await sock.sendReply(messageInfo, 'Please provide code to evaluate. Usage: `!eval <code>`')
           return
         }
 
-        // This ensures the code can be multi-line
         let result = await eval(`(async () => { ${code} })()`)
         if (typeof result !== 'string') {
           result = JSON.stringify(result, null, 2)
         }
-        return await sock.sendMessage(messageInfo, `✅ Eval Result:\n\`\`\`\n${result}\n\`\`\``)
+        return await sock.sendMessage(messageInfo, `Eval Result:\n\`\`\`\n${result}\n\`\`\``)
       } catch (err) {
-        await sock.sendReply(messageInfo, `❌ Eval Error:\n\`\`\`\n${err}\n\`\`\``)
-        logger.error('Eval command error:', err)      }
+        await sock.sendReply(messageInfo, `Eval Error:\n\`\`\`\n${err}\n\`\`\``)
+        logger.error('Eval command error:', err)
+      }
     },
   },
 
@@ -49,7 +48,7 @@ export const developmentCommands = {
         return await sock.sendReply(messageInfo, statsText)
       } catch (error) {
         logger.error('Cache stats command error:', error)
-        await sock.sendReply(messageInfo, '❌ Error getting cache statistics')
+        await sock.sendReply(messageInfo, 'Error getting cache statistics')
       }
     },
   },
@@ -67,14 +66,14 @@ export const developmentCommands = {
         nameCache.clearAllCache()
         
         const successText = 
-          `✅ *Cache Cleared Successfully!*\n\n` +
-          `🗑️ *Cleared:* ${totalBefore} entries\n` +
-          `⚡ Cache has been reset and will rebuild automatically`
+          `Cache Cleared Successfully!\n\n` +
+          `Cleared: ${totalBefore} entries\n` +
+          `Cache has been reset and will rebuild automatically`
 
         return await sock.sendReply(messageInfo, successText)
       } catch (error) {
         logger.error('Clear cache command error:', error)
-        await sock.sendReply(messageInfo, '❌ Error clearing cache')
+        await sock.sendReply(messageInfo, 'Error clearing cache')
       }
     },
   },
@@ -168,6 +167,73 @@ export const developmentCommands = {
       } catch (error) {
         logger.error('Reload command error:', error)
         await sock.sendReply(messageInfo, '❌ Error reloading bot: ' + error.message)
+      }
+    },
+  },
+
+  clearauth: {
+    description: 'Clear MongoDB authentication session (force re-login)',
+    aliases: ['resetauth', 'logout'],
+    category: 'Development',
+    creatorOnly: true,
+    handler: async (sock, messageInfo) => {
+      try {
+        await sock.sendReply(messageInfo, '🗑️ Clearing authentication session...')
+        
+        const { mongoAuthService } = await import('../../database/authService.js')
+        const cleared = await mongoAuthService.clearAllSessions()
+        
+        const successText = 
+          `✅ *Authentication Reset Complete*\n\n` +
+          `🗑️ *Sessions Cleared:* ${cleared}\n` +
+          `📱 *Status:* Bot will request QR code on next restart\n\n` +
+          `💡 *Next Steps:*\n` +
+          `• Restart the bot: \`npm start\`\n` +
+          `• Scan the new QR code to reconnect\n` +
+          `• All session data will be fresh`
+
+        return await sock.sendReply(messageInfo, successText)
+      } catch (error) {
+        logger.error('Clear auth command error:', error)
+        await sock.sendReply(messageInfo, '❌ Error clearing authentication session')
+      }
+    },
+  },
+  mongotest: {
+    description: 'Test MongoDB connection and auth system',
+    aliases: ['dbtest', 'testmongo'],
+    category: 'Development',
+    creatorOnly: true,
+    handler: async (sock, messageInfo) => {
+      try {
+        await sock.sendReply(messageInfo, 'Testing MongoDB connection...')
+        
+        const { isMongoConnected } = await import('../../database/connection.js')
+        const { mongoAuthService } = await import('../../database/authService.js')
+        const { User, Message, Session } = await import('../../database/mongoSchema.js')
+        
+        const isConnected = await isMongoConnected()
+        const sessionExists = await mongoAuthService.getSession()
+        
+        const userCount = isConnected ? await User.countDocuments() : 0
+        const messageCount = isConnected ? await Message.countDocuments() : 0
+        const sessionCount = isConnected ? await Session.countDocuments() : 0
+        
+        const testResults = 
+          `📊 *MongoDB Connection Test*\n\n` +
+          `🔌 *Connection:* ${isConnected ? '✅ Active' : '❌ Failed'}\n` +
+          `📱 *Auth Session:* ${sessionExists ? '✅ Exists' : '❌ Not Found'}\n` +
+          `� *Users:* ${userCount}\n` +
+          `� *Messages:* ${messageCount}\n` +
+          `🔑 *Sessions:* ${sessionCount}\n\n` +
+          `${isConnected ? 
+            '🟢 *Status:* MongoDB is working correctly' : 
+            '🔴 *Status:* MongoDB connection issues detected'}`
+
+        return await sock.sendReply(messageInfo, testResults)
+      } catch (error) {
+        logger.error('MongoDB test command error:', error)
+        await sock.sendReply(messageInfo, '❌ Error testing MongoDB connection')
       }
     },
   },
