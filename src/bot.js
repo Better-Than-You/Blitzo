@@ -4,7 +4,7 @@ import P from 'pino'
 import QRCode from 'qrcode'
 import { messageHandler } from './handlers/messageHandler.js'
 import { logger } from './utils/logger.js'
-import { botConfig } from './config/botConfig.js'
+import botConfig from './config/botConfig.js'
 import { nameCache } from './cache/nameCache.js'
 import { useMongoDBAuthState } from './database/mongoAuthAdapter.js'
 import { connectMongoDB } from './database/connection.js'
@@ -18,13 +18,13 @@ class WhatsAppBot {
   }
 
   async initialize() {
-    try {      logger.info('Connecting to MongoDB...')
+    try {      logger.info('⏱️  Connecting to MongoDB...', { hideIcon: true })
       await connectMongoDB()
       
-      logger.info('Initializing WhatsApp connection...')
+      logger.info('⏱️  Initializing WhatsApp connection...', { hideIcon: true })
       
       const { version, isLatest } = await fetchLatestBaileysVersion()
-      logger.info(`Using Baileys version: ${version.join(',')}, Latest: ${isLatest}`)
+      logger.info(`🌐 Using Baileys version: ${version.join(',')}, Latest: ${isLatest}`, { hideIcon: true })
       
       const { state, saveCreds, saveKeys, clearAuth } = await useMongoDBAuthState()
       logger.info('Using MongoDB session storage')
@@ -119,7 +119,7 @@ class WhatsAppBot {
           process.exit(1)
         }
       } else if (connection === 'open') {
-        logger.info(botConfig.name + ' connected successfully!')
+        logger.success(botConfig.name + ' connected successfully!')
         this.isConnected = true
         this.reconnectAttempts = 0
         
@@ -128,10 +128,10 @@ class WhatsAppBot {
         }
 
         setTimeout(() => {
-          logger.info(`${botConfig.name} is ready to receive messages!`)
+          logger.success(`⚡ ${botConfig.name} is ready to receive messages!`, { hideIcon: true })
         }, 2000)
       } else if (connection === 'connecting') {
-        logger.info('Connecting to WhatsApp...')      }
+        logger.info('⏱️  Connecting to WhatsApp...', { hideIcon: true })      }
     })
     
     this.sock.ev.on('messages.upsert', async m => {
