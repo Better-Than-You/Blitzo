@@ -141,7 +141,7 @@ async function logMessage (messageInfo, socket) {
 
   // Create colorized output
   const timeStamp = chalk.gray(`[${timestamp}]`)
-  const chatTypeColored = isGroup ? chalk.blue(chatType) : chalk.green(chatType)
+  const chatTypeColored = chalk.green(chatType)
   const userNameColored = chalk.yellow.bold(displayName)
   const messageText = chalk.white(messageInfo.text)
 

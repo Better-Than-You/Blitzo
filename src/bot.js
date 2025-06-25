@@ -56,7 +56,8 @@ class WhatsAppBot {
           maxCommitRetries: 1,
           delayBetweenTriesMs: 3000,
         },
-      }) // Socket extensions
+      }) 
+      
       this.sock.sendReply = async (message, text) => {
         await this.sock.sendMessage(message.jid, { text }, { quoted: message.originalMessage })
       }

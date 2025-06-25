@@ -1,7 +1,7 @@
 import mongoose from 'mongoose'
 import { logger } from '../utils/logger.js'
 
-const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/blitzo_bot'
+const uri = process.env.MONGODB_URI
 
 export async function connectMongoDB() {
   try {
@@ -29,13 +29,6 @@ export async function connectMongoDB() {
   }
 }
 
-export async function getMongoDb() {
-  if (!mongoose.connection.readyState) {
-    await connectMongoDB()
-  }
-  return mongoose.connection.db
-}
-
 export async function closeMongoDb() {
   if (mongoose.connection.readyState !== 0) {
     try {
@@ -45,8 +38,4 @@ export async function closeMongoDb() {
       logger.error('Error closing MongoDB:', error.message)
     }
   }
-}
-
-export async function isMongoConnected() {
-  return mongoose.connection.readyState === 1
 }
