@@ -8,7 +8,7 @@ class NameCache {
     this.updateInterval = 10 * 60 * 1000
     this.socket = null
     
-    logger.info('Name cache initialized')
+    logger.success('📝 Name cache system initialized', true)
   }
 
   setSocket(socket) {

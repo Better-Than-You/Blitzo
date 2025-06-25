@@ -1,12 +1,13 @@
 import { WhatsAppBot } from './src/bot.js';
 import { logger } from './src/utils/logger.js';
 import { botConfig } from './src/config/botConfig.js';
+import { mediaCache } from './src/cache/mediaCache.js';
 class BotManager {
     constructor() {
         this.bot = new WhatsAppBot();
     }    async start() {
         try {
-            logger.info('⚡ Starting ' + botConfig.name + '...');
+            logger.info('⚡ Starting ' + botConfig.name + '...', true);
             await this.bot.initialize();
             
             // Keep the process running
@@ -27,7 +28,14 @@ class BotManager {
     }
 
     async shutdown() {
-        logger.info('🛑 Shutting down bot...');
+        try {
+            logger.info('🔄 Shutting down gracefully...', true);
+            await mediaCache.clearAll();
+        } catch (error) {
+            logger.error('Error during shutdown:', true, error);
+        }
+        
+        logger.error('🛑 Bot stopped', true); // error only for color purposes
         process.exit(0);
     }
 }

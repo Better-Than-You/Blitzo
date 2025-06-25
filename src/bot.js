@@ -4,31 +4,35 @@ import P from 'pino'
 import QRCode from 'qrcode'
 import { messageHandler } from './handlers/messageHandler.js'
 import { logger } from './utils/logger.js'
-import botConfig from './config/botConfig.js'
+import { botConfig } from './config/botConfig.js'
 import { nameCache } from './cache/nameCache.js'
 import { useMongoDBAuthState } from './database/mongoAuthAdapter.js'
 import { connectMongoDB } from './database/connection.js'
 
 class WhatsAppBot {
-  constructor() {
+  constructor () {
     this.sock = null
     this.isConnected = false
     this.reconnectAttempts = 0
     this.maxReconnectAttempts = 5
   }
 
-  async initialize() {
-    try {      logger.info('⏱️  Connecting to MongoDB...', { hideIcon: true })
+  async initialize () {
+    try {
+      // Database Connection
+      logger.info('🔗 Establishing database connection...', true)
       await connectMongoDB()
-      
-      logger.info('⏱️  Initializing WhatsApp connection...', { hideIcon: true })
-      
+      logger.success('📊 Database connected successfully', true)
+
+      // WhatsApp Initialization
+      logger.info('🚀 Initializing WhatsApp connection...', true)
+
       const { version, isLatest } = await fetchLatestBaileysVersion()
-      logger.info(`🌐 Using Baileys version: ${version.join(',')}, Latest: ${isLatest}`, { hideIcon: true })
-      
+      logger.info(`📱 Baileys ${version.join('.')} ${isLatest ? '(Latest)' : '(Outdated)'}`, true)
+
       const { state, saveCreds, saveKeys, clearAuth } = await useMongoDBAuthState()
-      logger.info('Using MongoDB session storage')
-      
+      logger.info('🔐 Session storage configured', true)
+
       this.sock = makeWASocket({
         logger: P({ level: 'silent' }),
         auth: state,
@@ -52,17 +56,17 @@ class WhatsAppBot {
           maxCommitRetries: 1,
           delayBetweenTriesMs: 3000,
         },
-      })      // Socket extensions
+      }) // Socket extensions
       this.sock.sendReply = async (message, text) => {
         await this.sock.sendMessage(message.jid, { text }, { quoted: message.originalMessage })
       }
-      
+
       this.sock.sendReaction = async (message, reaction) => {
-        await this.sock.sendMessage(message.jid, { 
-          react: { 
-            text: reaction, 
-            key: message.originalMessage.key 
-          } 
+        await this.sock.sendMessage(message.jid, {
+          react: {
+            text: reaction,
+            key: message.originalMessage.key,
+          },
         })
       }
 
@@ -72,9 +76,9 @@ class WhatsAppBot {
       }
 
       this.setupEventHandlers(saveCreds)
-      
+
       nameCache.setSocket(this.sock)
-      logger.info(`${botConfig.name} initialized`)
+      logger.success('⚙️  Bot components initialized', true)
 
       return this.sock
     } catch (error) {
@@ -83,57 +87,59 @@ class WhatsAppBot {
     }
   }
 
-  setupEventHandlers(saveCreds) {
+  setupEventHandlers (saveCreds) {
     this.sock.ev.on('creds.update', saveCreds)
     this.sock.ev.on('connection.update', async update => {
       const { connection, lastDisconnect, qr } = update
-      
+
       if (qr) {
-        logger.info('Scan the QR code below to connect:')
+        logger.info('📱 Please scan the QR code to connect:', true)
         console.log(await QRCode.toString(qr, { type: 'terminal', small: true }))
       }
-      
+
       if (connection === 'close') {
         this.isConnected = false
         const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut
         const statusCode = lastDisconnect?.error?.output?.statusCode
-        
-        logger.warn(`Connection closed. Status: ${statusCode}`)
+
+        logger.warn(`🔌 Connection lost (Status: ${statusCode})`, true)
 
         if (shouldReconnect) {
           if (this.reconnectAttempts < this.maxReconnectAttempts) {
-            this.reconnectAttempts++            // Exponential backoff
+            this.reconnectAttempts++ // Exponential backoff
             const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000)
-            logger.warn(
-              `Reconnecting in ${delay / 1000}s... (Attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`
+            logger.info(
+              `🔄 Reconnecting in ${delay / 1000}s... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`, true
             )
 
             setTimeout(() => {
               this.initialize()
-            }, delay)          } else {
-            logger.error('Max reconnection attempts reached. Please restart the bot.')
+            }, delay)
+          } else {
+            logger.error('💀 Maximum reconnection attempts exceeded', true)
             process.exit(1)
           }
         } else {
-          logger.error('Bot logged out')
+          logger.error('🚪 Session terminated - restart required', true)
           process.exit(1)
         }
       } else if (connection === 'open') {
-        logger.success(botConfig.name + ' connected successfully!')
+        logger.success(`🎉 ${botConfig.name} connected successfully!`, true)
         this.isConnected = true
         this.reconnectAttempts = 0
-        
+
         if (nameCache.startCleanupInterval) {
           nameCache.startCleanupInterval()
         }
 
         setTimeout(() => {
-          logger.success(`⚡ ${botConfig.name} is ready to receive messages!`, { hideIcon: true })
+          logger.success(`⚡ ${botConfig.name} is ready to receive messages!`, true)
         }, 2000)
       } else if (connection === 'connecting') {
-        logger.info('⏱️  Connecting to WhatsApp...', { hideIcon: true })      }
+        logger.info('🔄 Establishing WhatsApp connection...', true)
+      }
     })
-    
+
     this.sock.ev.on('messages.upsert', async m => {
       await messageHandler(this.sock, m)
     })
@@ -155,7 +161,7 @@ class WhatsAppBot {
     this.sock.ev.on('presence.update', presence => {
       logger.debug(`Presence update: ${JSON.stringify(presence, null, 2)}`)
     })
-    
+
     // Debug mode
     if (process.env.DEBUG) {
       const originalEmit = this.sock.ev.emit
