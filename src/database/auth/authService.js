@@ -1,5 +1,5 @@
-import { Session } from './mongoSchema.js'
-import { logger } from '../utils/logger.js'
+import { Session } from '../mongoSchema.js'
+import { logger } from '../../utils/logger.js'
 
 export class MongoAuthService {
   constructor() {

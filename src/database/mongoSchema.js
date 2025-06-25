@@ -100,7 +100,37 @@ const sessionSchema = new mongoose.Schema({
     }
 })
 
+const configSchema = new mongoose.Schema({
+    key: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    value: {
+        type: mongoose.Schema.Types.Mixed,
+        required: true
+    },
+    type: {
+        type: String,
+        enum: ['string', 'number', 'boolean', 'array', 'object'],
+        required: true
+    },
+    description: {
+        type: String,
+        default: ''
+    },
+    lastUpdated: {
+        type: Date,
+        default: Date.now
+    },
+    updatedBy: {
+        type: String,
+        default: 'system'
+    }
+})
+
 export const User = mongoose.model('User', userSchema)
 export const Message = mongoose.model('Message', messageSchema)
 export const Command = mongoose.model('Command', commandSchema)
 export const Session = mongoose.model('Session', sessionSchema)
+export const Config = mongoose.model('Config', configSchema)

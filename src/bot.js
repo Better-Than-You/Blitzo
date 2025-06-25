@@ -6,7 +6,7 @@ import { messageHandler } from './handlers/messageHandler.js'
 import { logger } from './utils/logger.js'
 import { botConfig } from './config/botConfig.js'
 import { nameCache } from './cache/nameCache.js'
-import { useMongoDBAuthState } from './database/mongoAuthAdapter.js'
+import { useMongoDBAuthState } from './database/auth/mongoAuthAdapter.js'
 import { connectMongoDB } from './database/connection.js'
 
 class WhatsAppBot {
@@ -23,6 +23,9 @@ class WhatsAppBot {
       logger.info('🔗 Establishing database connection...', true)
       await connectMongoDB()
       logger.success('📊 Database connected successfully', true)
+
+      // Initialize Bot Configuration
+      await botConfig.initialize()
 
       // WhatsApp Initialization
       logger.info('🚀 Initializing WhatsApp connection...', true)

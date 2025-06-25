@@ -1,5 +1,5 @@
 import { mongoAuthService } from './authService.js'
-import { logger } from '../utils/logger.js'
+import { logger } from '../../utils/logger.js'
 import baileysPackage from 'baileys'
 
 const { initAuthCreds, BufferJSON, proto } = baileysPackage
