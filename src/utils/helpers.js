@@ -25,13 +25,17 @@ export function formatFileSize(bytes) {
   }
 
 export function formatDuration(seconds) {
-    if (seconds < 60) return `${seconds} seconds`;
-    const minutes = Math.floor(seconds / 60);
-    seconds %= 60;
-    if (minutes < 60) return `${minutes} minutes ${seconds} seconds`;
-    const hours = Math.floor(minutes / 60);
-    minutes %= 60;
-    return `${hours} hours ${minutes} minutes ${seconds} seconds`;
+    try {
+        if (seconds <= 0) return '0s';
+        const days = Math.floor(seconds / 86400) > 0 ? Math.floor(seconds / 86400) + 'd ' : '';
+        const hours = Math.floor(seconds / 3600) > 0 ? Math.floor(seconds / 3600) + 'h ' : '';
+        const minutes = Math.floor((seconds % 3600) / 60) > 0 ? Math.floor((seconds % 3600) / 60) + 'm ' : '';
+        const remainingSeconds = Math.round(seconds % 60); 
+        return days + hours + minutes + remainingSeconds + 's';
+    } catch (error) {
+        console.error('Error formatting duration:', error);
+        return '0s';
+    }
 }
 
 

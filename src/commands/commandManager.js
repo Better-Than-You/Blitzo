@@ -86,7 +86,7 @@ class CommandManager {
             })
           })
 
-          helpText += `\n⚙️ Current Prefix: \`${prefix}\`\n`
+          helpText += `\n⚙️  Current Prefix: \`${prefix}\`\n`
           helpText += `\`⚡ Powered by ${botConfig.name}\``
 
           await sock.sendMessage(messageInfo.jid, { text: helpText }, { quoted: messageInfo.originalMessage })
@@ -208,17 +208,20 @@ class CommandManager {
 
       // Mods only check
       if (commandHandler.modsOnly) {
-        if (!botConfig.isCreator(messageInfo.sender) && !botConfig.isMod(messageInfo.sender)) {
+        const isCreator = botConfig.isCreator(messageInfo.sender)
+        const isMod = botConfig.isMod(messageInfo.sender)
+        
+        if (!isCreator && !isMod) {
           return await sock.sendReply(messageInfo, '❌ This command is restricted to moderators only!')
         }
+      }
 
-        // Admin only check
-        if (commandHandler.adminOnly) {
-          const isAdmin = await this.checkIfAdmin(sock, messageInfo)
-          if (!isAdmin) {
-            await sock.sendReply(messageInfo, '❌ This command can only be used by group admins!')
-            return
-          }
+      // Admin only check
+      if (commandHandler.adminOnly) {
+        const isAdmin = await this.checkIfAdmin(sock, messageInfo)
+        if (!isAdmin) {
+          await sock.sendReply(messageInfo, '❌ This command can only be used by group admins!')
+          return
         }
       }
 

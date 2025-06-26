@@ -12,7 +12,7 @@ export const coreCommands = {
       const responseTime = endTime - startTime
 
       const pongText = `🏓 Pong!\n⚡ Response Time: ${responseTime}ms`
-      return await sock.sendMessage(messageInfo.jid, { text: pongText})
+      return await sock.sendMessage(messageInfo.jid, { text: pongText })
     },
   },
   status: {
@@ -30,7 +30,7 @@ export const coreCommands = {
         `✅ *Status:* Running and healthy!\n` +
         `⏱️ *Uptime:* ${hours}h ${minutes}m ${seconds}s\n` +
         `🧠 *Memory:* ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB\n` +
-        `⚙️ *Current Prefix:* \`${botConfig.prefix}\`\n` +
+        `⚙️  *Current Prefix:* \`${botConfig.prefix}\`\n` +
         `🔧 *Prefix Customizable:* Yes\n`
 
       return await sock.sendReply(messageInfo, statusText)
@@ -52,7 +52,8 @@ export const coreCommands = {
 
       return await sock.sendReply(messageInfo, infoText)
     },
-  },  prefix: {
+  },
+  prefix: {
     description: 'View or change bot prefix',
     aliases: ['setprefix', 'changeprefix'],
     category: 'Core',
@@ -64,7 +65,7 @@ export const coreCommands = {
       // If no new prefix provided, show current prefix
       if (args.length === 1) {
         const prefixText =
-          `⚙️ Current Prefix: \`${botConfig.prefix}\`\n\n` +
+          `⚙️  Current Prefix: \`${botConfig.prefix}\`\n\n` +
           `📝 Usage: \`${botConfig.prefix}prefix <new_prefix>\`\n` +
           `📌 Example: \`${botConfig.prefix}prefix !\`\n\n` +
           `✨ Valid prefixes: Any single character like \`/\`, \`!\`, \`.\`, \`#\`, etc.`
@@ -76,16 +77,24 @@ export const coreCommands = {
 
       // Validate new prefix
       if (!newPrefix || newPrefix.length !== 1) {
-        return await sock.sendReply(messageInfo, `❌ Invalid prefix!\n\nPrefix must be a single character.\nExample: \`${botConfig.prefix}prefix !\``)
+        return await sock.sendReply(
+          messageInfo,
+          `❌ Invalid prefix!\n\nPrefix must be a single character.\nExample: \`${botConfig.prefix}prefix !\``
+        )
       }
 
       // Don't allow space as prefix
       if (newPrefix === ' ') {
-        return await sock.sendReply(messageInfo, `❌ Space cannot be used as prefix!\n\nPlease choose a different character.`)
+        return await sock.sendReply(
+          messageInfo,
+          `❌ Space cannot be used as prefix!\n\nPlease choose a different character.`
+        )
       }
 
       const oldPrefix = botConfig.prefix
-      botConfig.setPrefix(newPrefix)
+      // botConfig.setPrefix(newPrefix)
+      botConfig.set('bot.prefix', newPrefix, 'string', 'Prefix changed by moderator', messageInfo.sender)
+
 
       const successText =
         `✅ Prefix Changed Successfully!\n\n` +
@@ -96,14 +105,16 @@ export const coreCommands = {
 
       return await sock.sendReply(messageInfo, successText)
     },
-  },  resetprefix: {
+  },
+
+  resetprefix: {
     description: 'Reset prefix to default (/)',
     aliases: ['defaultprefix'],
     category: 'Core',
     modsOnly: true,
     handler: async (sock, messageInfo) => {
       const oldPrefix = botConfig.prefix
-      botConfig.resetPrefix()
+      await botConfig.reset('prefix', messageInfo.sender)
 
       const resetText =
         `🔄 Prefix Reset Successfully!\n\n` +
@@ -126,18 +137,20 @@ export const coreCommands = {
         `FN:${botConfig.creator.name}`,
         `TEL;type=CELL;waid=${botConfig.creator.phone.slice(1)}:${botConfig.creator.phone}`,
         `EMAIL:${botConfig.creator.email}`,
-        'END:VCARD'
+        'END:VCARD',
       ].join('\n')
-      console.log(vcard);
-      await sock.sendMessage(messageInfo.jid, {
-        contacts: {
+      console.log(vcard)
+      await sock.sendMessage(
+        messageInfo.jid,
+        {
+          contacts: {
             displayName: botConfig.creator.name,
-            contacts: [
-                { vcard }
-        ]
-    }, 
-      }, {quoted: messageInfo.originalMessage})
-      return await sock.sendMessage(messageInfo.jid, {text: `Contact info has been sent!`})
+            contacts: [{ vcard }],
+          },
+        },
+        { quoted: messageInfo.originalMessage }
+      )
+      return await sock.sendMessage(messageInfo.jid, { text: `Contact info has been sent!` })
     },
   },
   hi: {
@@ -151,7 +164,7 @@ export const coreCommands = {
         `👋 Hello ${username}!\n\n` +
         `⚡ Welcome to *${botConfig.name}*!\n\n` +
         `🚀 Type \`${botConfig.prefix}help\` to see what I can do\n` +
-        `⚙️ Current prefix: \`${botConfig.prefix}\`\n\n` +
+        `⚙️  Current prefix: \`${botConfig.prefix}\`\n\n` +
         `💫 Let's get started!`
 
       return await sock.sendReply(messageInfo, welcomeText)

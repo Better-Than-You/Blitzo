@@ -49,7 +49,8 @@ export const moderationCommands = {
       }
 
       // Add user as moderator
-      if (botConfig.addMod(targetJid)) {
+      const success = await botConfig.addMod(targetJid, messageInfo.sender)
+      if (success) {
         const successText = 
           `✅ Moderator Added Successfully!\n\n` +
           `👤 User: ${extractPhoneFromJid(targetJid)}\n` +
@@ -105,7 +106,8 @@ export const moderationCommands = {
       }
 
       // Remove user from moderators
-      if (botConfig.removeMod(targetJid)) {
+      const success = await botConfig.removeMod(targetJid, messageInfo.sender)
+      if (success) {
         const successText = 
           `✅ Moderator Removed Successfully!\n\n` +
           `👤 User: ${extractPhoneFromJid(targetJid)}\n` +
@@ -124,7 +126,7 @@ export const moderationCommands = {
     aliases: ['mods', 'modlist'],
     category: 'Moderation',
     handler: async (sock, messageInfo) => {
-      const mods = botConfig.getMods()
+      const mods = await botConfig.getMods()
       const creator = botConfig.creator
       let mentions = []
       let modText = `🛡️ *Bot Administration*\n\n`
@@ -134,9 +136,9 @@ export const moderationCommands = {
 
       if (mods.length > 0) {
         modText += `🛡️ *Moderators (${mods.length}):*\n`
-        mods
-        mods.forEach((modJid, index) => {
-          modText += `${index + 1}. @${(modJid.split('@')[0n])}\n`
+        mods.forEach((phoneNumber, index) => {
+          const modJid = phoneNumber + '@s.whatsapp.net'
+          modText += `${index + 1}. @${phoneNumber}\n`
           mentions.push(modJid)
         })
       } else {
@@ -155,20 +157,24 @@ export const moderationCommands = {
     category: 'Moderation',
     creatorOnly: true,
     handler: async (sock, messageInfo) => {
-      const modsCount = botConfig.getMods().length
+      const mods = await botConfig.getMods()
+      const modsCount = mods.length
 
       if (modsCount === 0) {
         return await sock.sendReply(messageInfo, '❌ No moderators to clear!')
       }
 
-      botConfig.clearMods()
+      const success = await botConfig.clearMods(messageInfo.sender)
+      if (success) {
+        const successText = 
+          `✅ All Moderators Cleared!\n\n` +
+          `🗑️ Removed: ${modsCount} moderator(s)\n` +
+          `⚡ Only the creator has admin privileges now!`
 
-      const successText = 
-        `✅ All Moderators Cleared!\n\n` +
-        `🗑️ Removed: ${modsCount} moderator(s)\n` +
-        `⚡ Only the creator has admin privileges now!`
-
-      return await sock.sendReply(messageInfo, successText)
+        return await sock.sendReply(messageInfo, successText)
+      } else {
+        return await sock.sendReply(messageInfo, '❌ Failed to clear moderators. Please try again.')
+      }
     }
   },
 

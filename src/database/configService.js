@@ -95,14 +95,6 @@ class ConfigService {
         }
     }
 
-    async getPrefix() {
-        return await this.get('bot.prefix', '/');
-    }
-
-    async setPrefix(prefix, updatedBy = 'system') {
-        return await this.set('bot.prefix', prefix, 'string', 'Bot command prefix', updatedBy);
-    }
-
     async getMods() {
         return await this.get('bot.mods', []);
     }
