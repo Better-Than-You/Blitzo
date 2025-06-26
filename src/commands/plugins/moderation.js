@@ -11,14 +11,21 @@ export const moderationCommands = {
       const text = messageInfo.text.trim()
       const args = text.split(' ')
 
-      // Check if user is mentioned or phone number is provided
+      // Check if user replied to a message, mentioned someone, or provided phone number
       let targetJid = null
 
-      // Check for mentions in the message
-      if (messageInfo.mentions?.length > 0) {
+      // Priority 1: Check if replying to a message
+      if (messageInfo.originalMessage?.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
+        const quotedContext = messageInfo.originalMessage.message.extendedTextMessage.contextInfo
+        if (quotedContext.participant) {
+          targetJid = quotedContext.participant
+        }
+      }
+      // Priority 2: Check for mentions in the message
+      else if (messageInfo.mentions?.length > 0) {
         targetJid = messageInfo.originalMessage.message.extendedTextMessage.contextInfo.mentionedJid[0]
       } 
-      // Check if phone number is provided as argument
+      // Priority 3: Check if phone number is provided as argument
       else if (args.length > 1) {
         const phoneArg = args[1]
         // Remove any non-digit characters and format as JID
@@ -30,8 +37,9 @@ export const moderationCommands = {
 
       if (!targetJid) {
         return await sock.sendReply(messageInfo, 
-          `❌ Please mention a user or provide their phone number!\n\n` +
-          `📝 Usage: \`${botConfig.prefix}addmod @user\`\n` +
+          `❌ Please reply to a user's message, mention a user, or provide their phone number!\n\n` +
+          `📝 Usage: \`${botConfig.prefix}addmod\` (reply to message)\n` +
+          `📝 Or: \`${botConfig.prefix}addmod @user\`\n` +
           `📝 Or: \`${botConfig.prefix}addmod 1234567890\``
         )
       }
@@ -73,14 +81,21 @@ export const moderationCommands = {
       const text = messageInfo.text.trim()
       const args = text.split(' ')
 
-      // Check if user is mentioned or phone number is provided
+      // Check if user replied to a message, mentioned someone, or provided phone number
       let targetJid = null
 
-      // Check for mentions in the message
-      if (messageInfo.originalMessage?.message?.extendedTextMessage?.contextInfo?.mentionedJid?.length > 0) {
+      // Priority 1: Check if replying to a message
+      if (messageInfo.originalMessage?.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
+        const quotedContext = messageInfo.originalMessage.message.extendedTextMessage.contextInfo
+        if (quotedContext.participant) {
+          targetJid = quotedContext.participant
+        }
+      }
+      // Priority 2: Check for mentions in the message
+      else if (messageInfo.originalMessage?.message?.extendedTextMessage?.contextInfo?.mentionedJid?.length > 0) {
         targetJid = messageInfo.originalMessage.message.extendedTextMessage.contextInfo.mentionedJid[0]
       } 
-      // Check if phone number is provided as argument
+      // Priority 3: Check if phone number is provided as argument
       else if (args.length > 1) {
         const phoneArg = args[1]
         // Remove any non-digit characters and format as JID
@@ -92,8 +107,9 @@ export const moderationCommands = {
 
       if (!targetJid) {
         return await sock.sendReply(messageInfo, 
-          `❌ Please mention a user or provide their phone number!\n\n` +
-          `📝 Usage: \`${botConfig.prefix}removemod @user\`\n` +
+          `❌ Please reply to a user's message, mention a user, or provide their phone number!\n\n` +
+          `📝 Usage: \`${botConfig.prefix}removemod\` (reply to message)\n` +
+          `📝 Or: \`${botConfig.prefix}removemod @user\`\n` +
           `📝 Or: \`${botConfig.prefix}removemod 1234567890\``
         )
       }
