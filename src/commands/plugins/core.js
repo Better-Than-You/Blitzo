@@ -170,4 +170,30 @@ export const coreCommands = {
       return await sock.sendReply(messageInfo, welcomeText)
     },
   },
+  shutdown: {
+    description: 'Shutdown the bot (Creator only)',
+    aliases: ['exit', 'stop'],
+    category: 'Core',
+    usage: 'shutdown',
+    creatorOnly: true,
+    handler: async (sock, messageInfo) => {
+      const shutdownText =
+        `🔒 Shutting down ${botConfig.name}...\n\n` +
+        `💾 Syncing all data...\n` +
+        `🛑 Bot will stop in a few seconds.`
+
+      await sock.sendReply(messageInfo, shutdownText)
+
+      // Import and use the botManager shutdown
+      setTimeout(async () => {
+        try {
+          const { botManager } = await import('../../../index.js')
+          await botManager.shutdown()
+        } catch (error) {
+          console.error('Error during shutdown:', error)
+          process.exit(1)
+        }
+      }, 2000) // Give time for the message to be sent
+    },
+  },
 }
