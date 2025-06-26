@@ -35,7 +35,7 @@ class ConfigService {
                 }
             }
 
-            logger.success(`⚙️ Configuration system initialized (${this.cache.size} configs loaded)`, true);
+            logger.success(`⚙️  Configuration system initialized (${this.cache.size} configs loaded)`, true);
         } catch (error) {
             logger.error('Failed to initialize configuration system:', true, error);
             throw error;

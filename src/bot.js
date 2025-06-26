@@ -82,7 +82,7 @@ class WhatsAppBot {
       this.setupEventHandlers(saveCreds)
 
       nameCache.setSocket(this.sock)
-      logger.success('⚙️   Bot components initialized', true)
+      logger.success('⚙️  Bot components initialized', true)
 
       return this.sock
     } catch (error) {

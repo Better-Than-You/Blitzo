@@ -19,9 +19,8 @@ class ModlistCache {
         try {
             logger.info('🔧 Initializing moderator cache system...', true);
             
-            // Load from database first
             const dbMods = await configService.getMods();
-            logger.info(`📊 Loaded ${dbMods.length} mods from database: ${JSON.stringify(dbMods)}`, true);
+            // logger.info(`📊 Loaded ${dbMods.length} mods from database: ${JSON.stringify(dbMods)}`, true);
             this.mods = new Set(dbMods);
             
             // Save to cache file

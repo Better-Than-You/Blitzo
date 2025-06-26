@@ -39,11 +39,7 @@ class BotConfig {
     if (this.isInitialized) return
 
     try {
-      logger.info('🔧 Initializing bot configuration...', true)
-
       await configService.initialize()
-
-      // Initialize modlist cache
       await modlistCache.initialize()
 
       const isFirstTime = await this.isFirstTimeSetup()
