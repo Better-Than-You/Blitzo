@@ -168,11 +168,11 @@ export class StickerUtils {
     }
 
     static async gifToSticker(gifBuffer, options = {}) {
-        return this.createSticker(gifBuffer, options, 80);
+        return this.createCompressedSticker(gifBuffer, options, 80, 'gif');
     }
 
     static async videoToSticker(videoBuffer, duration = 6, options = {}) {
-        return this.createSticker(videoBuffer, options, 80);
+        return this.createCompressedSticker(videoBuffer, options, 80, 'video', duration);
     }
 
     static async createSticker(buffer, options, quality) {
@@ -189,6 +189,117 @@ export class StickerUtils {
         });
         
         return sticker.toBuffer();
+    }
+
+    static async createCompressedSticker(buffer, options = {}, initialQuality = 80, mediaType = 'gif', duration = 6) {
+        const { pack = botConfig.name, author = botConfig.creator.name } = options;
+        const timestamp = Date.now();
+        
+        try {
+            // First, try to compress the input buffer if it's too large
+            let processedBuffer = buffer;
+            
+            if (mediaType === 'gif' || mediaType === 'video') {
+                // For GIF/Video, try to optimize the input first
+                processedBuffer = await this.optimizeMediaForSticker(buffer, mediaType, duration);
+            }
+            
+            let quality = initialQuality;
+            let stickerBuffer;
+            let attempts = 0;
+            const maxAttempts = 5;
+            
+            // Iteratively reduce quality until size is under 750KB
+            do {
+                attempts++;
+                
+                const sticker = new Sticker(processedBuffer, {
+                    pack,
+                    author,
+                    type: StickerTypes.FULL,
+                    categories: ["🤩", "🎉"],
+                    id: timestamp.toString(),
+                    quality,
+                    background: "transparent"
+                });
+                
+                stickerBuffer = await sticker.toBuffer();
+                
+                const sizeCheck = this.isStickerSizeCompliant(stickerBuffer);
+                
+                if (sizeCheck.compliant) {
+                    logger.info(`Sticker size compliant: ${sizeCheck.sizeFormatted} (quality: ${quality}%)`);
+                    break;
+                }
+                
+                // Reduce quality for next attempt
+                quality = Math.max(20, quality - 60); // Reduce by 60% each time
+                
+                logger.warn(`Sticker size ${sizeCheck.sizeFormatted} exceeds ${sizeCheck.maxSizeFormatted}, reducing quality to ${quality}% (attempt ${attempts}/${maxAttempts})`);
+                
+            } while (!this.isStickerSizeCompliant(stickerBuffer).compliant && attempts < maxAttempts);
+            
+            // Final size check and warning
+            const finalSizeCheck = this.isStickerSizeCompliant(stickerBuffer);
+            if (!finalSizeCheck.compliant) {
+                logger.warn(`Warning: Final sticker size ${finalSizeCheck.sizeFormatted} still exceeds ${finalSizeCheck.maxSizeFormatted} after ${attempts} compression attempts`);
+            }
+            
+            // Cache the compressed sticker
+            try {
+                const cacheKey = `sticker_${mediaType}_${timestamp}_q${quality}`;
+                await mediaCache.cacheMediaDirect(
+                    stickerBuffer, 
+                    `${cacheKey}.webp`, 
+                    'webp', 
+                    'image/webp'
+                );
+                
+                logger.info(`Cached compressed ${mediaType} sticker: ${cacheKey}, size: ${this.formatFileSize(stickerBuffer.length)}, quality: ${quality}%`);
+            } catch (cacheError) {
+                logger.error('Failed to cache sticker:', cacheError.message);
+            }
+            
+            return stickerBuffer;
+            
+        } catch (error) {
+            logger.error(`Error creating compressed ${mediaType} sticker:`, error.message);
+            // Fallback to original method
+            return this.createSticker(buffer, options, Math.max(20, initialQuality - 20));
+        }
+    }
+
+    static async optimizeMediaForSticker(buffer, mediaType, duration = 6) {
+        try {
+            if (mediaType === 'gif') {
+                // For GIFs, we can use sharp to optimize
+                return await sharp(buffer, { animated: true })
+                    .resize(512, 512, { 
+                        fit: 'inside',
+                        withoutEnlargement: true 
+                    })
+                    .gif({ 
+                        loop: 0,
+                        delay: 100, // Increase delay to reduce file size
+                        effort: 7 // Higher effort for better compression
+                    })
+                    .toBuffer();
+            } else if (mediaType === 'video') {
+                // For videos, we need to convert to GIF first or use the original buffer
+                // Since we don't have ffmpeg integration here, return original buffer
+                // In a production environment, you might want to use ffmpeg to:
+                // - Resize to max 512x512
+                // - Limit to 6 seconds
+                // - Reduce frame rate
+                // - Compress
+                return buffer;
+            }
+            
+            return buffer;
+        } catch (error) {
+            logger.error(`Error optimizing ${mediaType}:`, error.message);
+            return buffer;
+        }
     }
 
     static async removeBackground(imageBuffer) {
@@ -213,5 +324,24 @@ export class StickerUtils {
 
     static isFFmpegAvailable() {
         return Promise.resolve(true);
+    }
+
+    static formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    static isStickerSizeCompliant(buffer) {
+        const maxSizeBytes = 1024 * 750; // 750KB
+        return {
+            compliant: buffer.length <= maxSizeBytes,
+            size: buffer.length,
+            sizeFormatted: this.formatFileSize(buffer.length),
+            maxSize: maxSizeBytes,
+            maxSizeFormatted: this.formatFileSize(maxSizeBytes)
+        };
     }
 }
